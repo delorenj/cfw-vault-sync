@@ -79,10 +79,12 @@ async function getRemoteFiles() {
       const data = await response.json();
       
       for (const file of data.files) {
-        // Use MD5 hash from custom metadata if available, otherwise skip
-        if (file.md5) {
-          fileMap.set(file.key, file.md5);
-        }
+        // Store the full file object for comparison
+        fileMap.set(file.key, {
+          size: file.size,
+          uploaded: file.uploaded,
+          modified: file.customMetadata?.modified
+        });
       }
       
       hasMore = data.truncated;
@@ -206,11 +208,23 @@ async function sync() {
   
   for (const file of localFiles) {
     localFileSet.add(file.relativePath);
-    const localHash = await getFileHash(file.fullPath);
-    const remoteHash = remoteFiles.get(file.relativePath);
+    const remoteFile = remoteFiles.get(file.relativePath);
     
-    if (!remoteHash || localHash !== remoteHash) {
+    if (!remoteFile) {
+      // File doesn't exist remotely
       filesToUpload.push(file);
+    } else {
+      // Compare using file size and modification time as a heuristic
+      const stats = await fs.stat(file.fullPath);
+      const localSize = stats.size;
+      const localModified = stats.mtime.getTime();
+      const remoteSize = remoteFile.size;
+      const remoteModified = new Date(remoteFile.modified || remoteFile.uploaded).getTime();
+      
+      // Upload if size differs or local file is newer
+      if (localSize !== remoteSize || localModified > remoteModified) {
+        filesToUpload.push(file);
+      }
     }
   }
   
