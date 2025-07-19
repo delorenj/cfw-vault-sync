@@ -6,7 +6,9 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"test": "vitest"
+		"test": "vitest",
+		"sync": "node sync-vault.js",
+		"sync:prod": "WORKER_URL=https://r2-worker.jaradd.workers.dev node sync-vault.js"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.8.19",
