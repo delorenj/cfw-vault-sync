@@ -81,6 +81,7 @@ async function handleBulkUpload(request, env, corsHeaders) {
 				},
 				customMetadata: {
 					modified: file.modified || new Date().toISOString(),
+					md5: file.md5 || ''
 				}
 			});
 			results.push({ path: file.path, status: 'success' });
@@ -116,6 +117,7 @@ async function handleListFiles(request, env, corsHeaders) {
 		uploaded: obj.uploaded,
 		httpEtag: obj.httpEtag,
 		customMetadata: obj.customMetadata,
+		md5: obj.customMetadata?.md5 || null
 	}));
 	
 	return new Response(JSON.stringify({

@@ -60,17 +60,37 @@ async function getFileHash(filePath) {
 
 async function getRemoteFiles() {
   try {
-    const response = await fetch(`${WORKER_URL}/api/list`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch remote files: ${response.status}`);
-    }
-    
-    const data = await response.json();
     const fileMap = new Map();
+    let cursor = null;
+    let hasMore = true;
     
-    for (const file of data.files) {
-      fileMap.set(file.key, file.httpEtag.replace(/"/g, ''));
+    while (hasMore) {
+      const url = new URL(`${WORKER_URL}/api/list`);
+      if (cursor) {
+        url.searchParams.set('cursor', cursor);
+      }
+      
+      const response = await fetch(url.toString());
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch remote files: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      for (const file of data.files) {
+        // Use MD5 hash from custom metadata if available, otherwise skip
+        if (file.md5) {
+          fileMap.set(file.key, file.md5);
+        }
+      }
+      
+      hasMore = data.truncated;
+      cursor = data.cursor;
+      
+      if (hasMore) {
+        console.log(`Fetched ${fileMap.size} files so far...`);
+      }
     }
     
     return fileMap;
@@ -88,12 +108,14 @@ async function uploadFiles(files) {
       const stats = await fs.stat(file.fullPath);
       const content = await fs.readFile(file.fullPath);
       const base64Content = content.toString('base64');
+      const hash = crypto.createHash('md5').update(content).digest('hex');
       
       filesToUpload.push({
         path: file.relativePath,
         content: base64Content,
         type: getContentType(file.relativePath),
         modified: stats.mtime.toISOString(),
+        md5: hash
       });
     } catch (error) {
       console.error(`Error reading file ${file.fullPath}:`, error.message);
