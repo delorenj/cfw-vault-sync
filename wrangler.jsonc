@@ -52,4 +52,14 @@
 			"bucket_name": "delodocs",
 		},
 	],
+	
+	/**
+	 * Cron Triggers for automatic sync
+	 * https://developers.cloudflare.com/workers/configuration/cron-triggers/
+	 */
+	"triggers": {
+		"crons": [
+			"0 */4 * * *"     // Every 4 hours - balanced for personal use
+		]
+	}
 }

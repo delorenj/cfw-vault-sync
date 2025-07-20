@@ -33,7 +33,7 @@ export default {
 			} else if (pathname === '/api/delete-all' && request.method === 'DELETE') {
 				return await handleDeleteAll(request, env, corsHeaders);
 			} else if (pathname.startsWith('/files/')) {
-				const key = pathname.slice(7); // Remove '/files/' prefix
+				const key = decodeURIComponent(pathname.slice(7)); // Remove '/files/' prefix and decode
 				return await handleFileOperations(request, env, key, corsHeaders);
 			} else {
 				return new Response('Not Found', { status: 404, headers: corsHeaders });
@@ -45,13 +45,51 @@ export default {
 			});
 		}
 	},
+
+	// Handle cron triggers for automatic sync
+	async scheduled(event, env, ctx) {
+		console.log('Cron trigger fired:', event.cron);
+		
+		try {
+			// Option 1: Trigger your local sync via webhook
+			if (env.SYNC_WEBHOOK_URL) {
+				const response = await fetch(env.SYNC_WEBHOOK_URL, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${env.SYNC_TOKEN}`
+					},
+					body: JSON.stringify({
+						trigger: 'cron',
+						cron: event.cron,
+						timestamp: new Date().toISOString()
+					})
+				});
+				
+				if (response.ok) {
+					console.log('Sync webhook triggered successfully');
+				} else {
+					console.error('Sync webhook failed:', response.status, await response.text());
+				}
+			} else {
+				console.log('No SYNC_WEBHOOK_URL configured, skipping webhook trigger');
+			}
+			
+			// Option 2: Add basic cleanup tasks that can run server-side
+			// For example, clean up old temporary files, logs, etc.
+			
+		} catch (error) {
+			console.error('Scheduled sync error:', error);
+		}
+		
+		console.log('Scheduled sync completed at:', new Date().toISOString());
+	},
 };
 
 function isAuthorized(authHeader, env) {
-	// Use the AUTH_KEY_SECRET that's already set
-	const token = env.AUTH_KEY_SECRET || env.SYNC_TOKEN;
+	const token = env.SYNC_TOKEN;
 	if (!token) {
-		console.error('AUTH_KEY_SECRET/SYNC_TOKEN not found in environment');
+		console.error('SYNC_TOKEN not found in environment');
 		return false;
 	}
 	

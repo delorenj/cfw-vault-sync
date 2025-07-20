@@ -7,8 +7,8 @@ const crypto = require('crypto');
 // Configuration
 const VAULT_PATH = process.env.VAULT_PATH || '/home/delorenj/code/DeLoDocs';
 const WORKER_URL = process.env.WORKER_URL || 'http://localhost:8787'; // Change to your deployed URL
-// No authentication needed anymore
-// const SYNC_TOKEN = process.env.AUTH_KEY_SECRET || process.env.SYNC_TOKEN || 'your-secret-token-here';
+// Authentication token for secure endpoints (if needed in future)
+// const SYNC_TOKEN = process.env.SYNC_TOKEN;
 const BATCH_SIZE = 50; // Upload files in batches
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB max file size
 
@@ -174,12 +174,18 @@ function getContentType(filePath) {
 async function deleteRemoteFiles(filesToDelete) {
   for (const file of filesToDelete) {
     try {
-      const response = await fetch(`${WORKER_URL}/files/${file}`, {
+      // Properly encode the file path for the URL, but only encode each path segment
+      const encodedPath = file.split('/').map(segment => encodeURIComponent(segment)).join('/');
+      const response = await fetch(`${WORKER_URL}/files/${encodedPath}`, {
         method: 'DELETE'
       });
       
       if (response.ok) {
         console.log(`Deleted remote file: ${file}`);
+      } else {
+        console.error(`Failed to delete ${file}: ${response.status} ${response.statusText}`);
+        const body = await response.text();
+        console.error(`Response: ${body}`);
       }
     } catch (error) {
       console.error(`Error deleting ${file}:`, error.message);

@@ -8,7 +8,9 @@
 		"start": "wrangler dev",
 		"test": "vitest",
 		"sync": "node sync-vault.js",
-		"sync:prod": "WORKER_URL=https://r2-worker.jaradd.workers.dev node sync-vault.js"
+		"sync:prod": "WORKER_URL=https://r2-worker.jaradd.workers.dev node sync-vault.js",
+		"webhook": "node webhook-server.js",
+		"webhook:dev": "WEBHOOK_PORT=3001 node webhook-server.js"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.8.19",
